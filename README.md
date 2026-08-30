@@ -261,6 +261,92 @@ sudo userdel turing
 sudo systemctl daemon-reload
 ```
 
+### Reinstalación (desde cero)
+
+Para dejar la máquina como recién instalada: primero desinstala
+(arriba), y luego vuelve a seguir la sección
+[**Instalación en Debian / Orange Pi (arm64)**](#instalación-en-debian--orange-pi-arm64)
+desde el paso 1.
+
+```bash
+# 1. Borrar todo lo instalado por el controlador
+sudo systemctl disable --now turing-display.service 2>/dev/null || true
+sudo rm -f /etc/systemd/system/turing-display.service
+sudo rm -rf /opt/turing-display-controller
+sudo rm -rf /opt/turing-build
+sudo rm -rf /etc/turing-display
+sudo rm -f /etc/udev/rules.d/99-turing-display.rules
+sudo userdel turing 2>/dev/null || true
+sudo systemctl daemon-reload
+sudo udevadm control --reload-rules
+
+# 2. (Opcional) Limpiar datos persistentes si quieres empezar de cero:
+sudo rm -rf ~/turing-data      # frases.db y spotify_tokens.db (ajusta path si lo moviste)
+```
+
+> **Importante:** esto borra la base de datos de frases y los tokens de
+> Spotify. Si solo quieres **actualizar** el binario sin perder datos,
+> usa la sección [Actualizar el binario](#actualizar-el-binario) de
+> arriba, que es no destructiva.
+
+```bash
+# 3. Volver a instalar desde el paso 1 de la guía:
+#    https://github.com/.../turing-display-controller#instalación-en-debian--orange-pi-arm64
+sudo apt update
+sudo apt install -y git build-essential libusb-1.0-0-dev libudev-dev pkg-config
+sudo mkdir -p /opt/turing-build && sudo chown $USER:$USER /opt/turing-build
+cd /opt/turing-build
+git clone <repo-url> turing-display-controller
+cd turing-display-controller
+curl -LsSf https://astral.sh/uv/install.sh | sh
+source $HOME/.local/bin/env
+uv sync
+uv run python scripts/build.py
+sudo mkdir -p /opt/turing-display-controller
+sudo cp -r dist/turing-display-controller/* /opt/turing-display-controller/
+sudo chmod +x /opt/turing-display-controller/turing-display-controller
+sudo useradd --system --shell /usr/sbin/nologin \
+    --home /opt/turing-display-controller turing
+sudo tee /etc/udev/rules.d/99-turing-display.rules >/dev/null <<'EOF'
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", MODE="0666"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7522", MODE="0666"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="5722", MODE="0666"
+EOF
+sudo udevadm control --reload-rules && sudo udevadm trigger
+sudo mkdir -p /etc/turing-display
+# Si tienes backup de config.ini, restáuralo antes de continuar:
+# sudo cp ~/backup/config.ini /etc/turing-display/config.ini
+# Si no, edítalo desde cero:
+sudo $EDITOR /etc/turing-display/config.ini
+sudo chmod 644 /etc/turing-display/config.ini
+sudo chown root:turing /etc/turing-display/config.ini
+# (re-crea la unidad systemd como en el paso 7)
+sudo tee /etc/systemd/system/turing-display.service >/dev/null <<'EOF'
+[Unit]
+Description=Turing Smart Display Controller
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/opt/turing-display-controller
+ExecStart=/opt/turing-display-controller/turing-display-controller
+Environment=TD_CONFIG=/etc/turing-display/config.ini
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+EOF
+sudo systemctl daemon-reload
+sudo systemctl enable --now turing-display.service
+sudo systemctl status turing-display.service
+```
+
 ---
 
 ## Configuración de Spotify (opcional)
@@ -373,7 +459,7 @@ src/turing_display/
 
 tests/                      # 141 tests (pytest)
 docs/                       # Documentacion (ORIENTATION_FIX.md)
-scripts/                    # Scripts de build y verificacion
+scripts/                    # build.py, build.spec, launcher.py, verify, etc.
 ```
 
 ## Empaquetar como binario (PyInstaller)
@@ -493,6 +579,7 @@ Notas Windows:
 | `FileNotFoundError: 'COM5'` desde el `.exe`                                                   | El`.exe` no encuentra `config.ini`               | Coloca`config.ini` en la misma carpeta que el `.exe`.                                                                        |
 | Antivirus borra`turing-display-controller.exe`                                                  | Falso positivo de PyInstaller                        | Añade excepción en Windows Defender o desactiva temporalmente.                                                                 |
 | `pyinstaller: command not found`                                                                | `uv sync` no instaló PyInstaller                  | Verifica`pyproject.toml` tiene `pyinstaller` en `[dependency-groups] dev`. Corre `uv sync --group dev`.                  |
+| `ImportError: attempted relative import with no known parent package` al ejecutar el binario   | El spec usaba`__main__.py` directo (sin `__package__`) | El spec actual usa `scripts/launcher.py` como entry. Reconstruye: `uv run python scripts/build.py --clean`. |
 
 ### Linux (Debian / Ubuntu / Orange Pi)
 
