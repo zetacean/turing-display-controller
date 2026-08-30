@@ -275,15 +275,53 @@ cd turing-display-controller
 sudo bash scripts/install_pi.sh
 ```
 
-`install_pi.sh` hace todo: instala apt deps, uv, compila el binario
-con PyInstaller, lo deploya en `/opt/turing-display-controller/`,
-crea el usuario `turing`, regla udev, `config.ini`, unidad systemd
-y arranca el servicio.
+`install_pi.sh` hace todo de forma idempotente:
 
-`clean_pi.sh` borra todo lo anterior: servicio, binarios,
-configuración, usuario, regla udev. **No** borra `phrases.db` ni
-tokens de Spotify (están en `/var/lib/turing-display/` si usaste el
-`config.ini` por defecto; bórralos a mano si quieres).
+| # | Acción |
+|---|---|
+| 1 | Instala apt deps: `git`, `build-essential`, `libusb-1.0-0-dev`, `libudev-dev`, `pkg-config`, `rsync` |
+| 2 | Instala fuentes TTF: `fonts-liberation`, `fonts-dejavu-core` (sin esto, PIL cae al default de 8×8 px) |
+| 3 | Instala `uv` si no está |
+| 4 | Copia el repo a `/opt/turing-build/` y compila el binario con PyInstaller |
+| 5 | Deploya el binario en `/opt/turing-display-controller/` |
+| 6 | Crea el usuario de servicio `turing` |
+| 7 | Crea la regla udev para CH340/CH341 (VID `1a86`, PID `7523/7522/5722`) |
+| 8 | Crea `/home/orangepi/images/` (donde subir fotos por SCP) y `/var/lib/turing-display/` (DBs) |
+| 9 | Crea `/etc/turing-display/config.ini` con paths absolutos |
+| 10 | Crea la unidad systemd `turing-display.service` con `Environment=TD_CONFIG=...` |
+| 11 | `daemon-reload`, `enable`, `restart`, muestra estado y logs |
+
+`clean_pi.sh` borra **todo** lo instalado:
+
+- servicio systemd + reset failed
+- `/opt/turing-display-controller/` (binarios, `_internal/`, `data/`, `cache/`)
+- `/opt/turing-build/` (caché de compilación)
+- `/etc/turing-display/` (config.ini)
+- `/var/lib/turing-display/` (frases.db, spotify_tokens.db)
+- regla udev
+- usuario `turing`
+- y al final **verifica** que no queda nada (lista cualquier residuo)
+
+`clean_pi.sh` **NO** borra:
+
+- `/home/orangepi/images/` (fotos del usuario)
+- El repo clonado
+
+### Verificación post-instalación
+
+```bash
+# Servicio activo
+systemctl is-active turing-display.service
+
+# Carga el config correcto (no debe decir "config.ini not found")
+journalctl -u turing-display.service -n 30 | grep -i 'watcher\|started'
+
+# Ve las 3 rutas clave:
+echo "/opt/turing-display-controller/  -> binario"
+echo "/etc/turing-display/config.ini  -> config"
+echo "/var/lib/turing-display/        -> frases.db + spotify_tokens.db"
+echo "/home/orangepi/images/          -> fotos (scp)"
+```
 
 ### Instalación manual paso a paso
 

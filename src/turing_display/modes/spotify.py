@@ -10,7 +10,8 @@ from typing import Any
 import httpx
 from PIL import Image, ImageDraw, ImageFont
 
-from .base import Mode, RenderContext
+from ..display.fonts import load_font
+from .base import RenderContext
 
 logger = logging.getLogger(__name__)
 
@@ -113,15 +114,11 @@ class SpotifyMode:
         img_h = Image.new("RGB", (h_w, h_h), (16, 16, 16))
         draw_h = ImageDraw.Draw(img_h)
 
-        try:
-            font = ImageFont.truetype("arial.ttf", 22)
-            sub_font = ImageFont.truetype("arial.ttf", 14)
-        except OSError:
-            font = ImageFont.load_default()
-            sub_font = ImageFont.load_default()
+        font = load_font(22)
+        sub_font = load_font(14)
 
-        assert isinstance(font, ImageFont.FreeTypeFont)
-        assert isinstance(sub_font, ImageFont.FreeTypeFont)
+        assert isinstance(font, ImageFont.BaseImageFont)
+        assert isinstance(sub_font, ImageFont.BaseImageFont)
 
         # Carátula placeholder a la izquierda
         ph = Image.new("RGB", (320, 240), (16, 16, 16))
@@ -178,15 +175,11 @@ class SpotifyMode:
             img_h.paste(ph, (0, 0))
 
         # Texto a la derecha
-        try:
-            font_label = ImageFont.truetype("arial.ttf", 14)
-            font_value = ImageFont.truetype("arial.ttf", 18)
-        except OSError:
-            font_label = ImageFont.load_default()
-            font_value = ImageFont.load_default()
+        font_label = load_font(14)
+        font_value = load_font(18)
 
-        assert isinstance(font_label, ImageFont.FreeTypeFont)
-        assert isinstance(font_value, ImageFont.FreeTypeFont)
+        assert isinstance(font_label, ImageFont.BaseImageFont)
+        assert isinstance(font_value, ImageFont.BaseImageFont)
 
         def _draw_centered(draw, y, text, font, fill, area_x, area_w):
             """Centra el texto dentro del área [area_x, area_x+area_w]."""

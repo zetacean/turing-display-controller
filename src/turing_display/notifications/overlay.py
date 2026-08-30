@@ -7,9 +7,10 @@ import queue
 import threading
 import time
 from dataclasses import dataclass, field
-from typing import Optional
 
 from PIL import Image, ImageDraw, ImageFont
+
+from ..display.fonts import load_font
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +46,7 @@ class NotificationOverlay:
 
     def __init__(self, default_duration: float = 5.0) -> None:
         self._queue: queue.Queue[Notification] = queue.Queue()
-        self._active: Optional[Notification] = None
+        self._active: Notification | None = None
         self._active_until: float = 0.0
         self._lock = threading.Lock()
         self._default_duration = default_duration
@@ -53,7 +54,7 @@ class NotificationOverlay:
     # ------------------------------------------------------------------ #
     # API pública
     # ------------------------------------------------------------------ #
-    def push(self, message: str, duration: Optional[float] = None) -> None:
+    def push(self, message: str, duration: float | None = None) -> None:
         """Encola una notificación (no bloquea).
 
         Parameters
@@ -86,7 +87,7 @@ class NotificationOverlay:
             return False
         return time.time() < self._active_until
 
-    def current(self) -> Optional[Notification]:
+    def current(self) -> Notification | None:
         """Devuelve la notificación activa actual (``None`` si no hay)."""
         if self.is_active():
             return self._active
@@ -148,7 +149,7 @@ class NotificationOverlay:
         return _render_fullscreen(base_frame.size, active.message)
 
     @property
-    def notification_queue(self) -> "queue.Queue[Notification]":
+    def notification_queue(self) -> queue.Queue[Notification]:
         """Acceso directo a la cola FIFO (para tests o extensiones)."""
         return self._queue
 
@@ -202,12 +203,9 @@ def _render_fullscreen(
     frame = Image.new("RGB", (width, height), (20, 20, 20))
 
     # Fuente
-    try:
-        font = ImageFont.truetype("arial.ttf", 22)
-    except OSError:
-        font = ImageFont.load_default()
+    font = load_font(22)
 
-    assert isinstance(font, ImageFont.FreeTypeFont)
+    assert isinstance(font, ImageFont.BaseImageFont)
 
     # Ancho disponible para el wrap del texto
     side_padding = 20

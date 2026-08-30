@@ -9,10 +9,10 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
+from ..display.fonts import load_font
 from ..display.gradients import happy_background
-from ..display.renderer import fit_letterbox
 from ..phrases.repo import Phrase, PhraseRepo
-from .base import Mode, RenderContext
+from .base import RenderContext
 from .slideshow import SlideshowMode
 
 logger = logging.getLogger(__name__)
@@ -42,18 +42,13 @@ def _render_phrase(
             (width, height), Image.Resampling.LANCZOS
         )
 
-    # Tipografía (con fallback al default)
-    try:
-        font_text = ImageFont.truetype("arial.ttf", 36)
-        font_author = ImageFont.truetype("arial.ttf", 20)
-        font_cat = ImageFont.truetype("arial.ttf", 16)
-    except OSError:
-        font_text = ImageFont.load_default()
-        font_author = ImageFont.load_default()
-        font_cat = ImageFont.load_default()
+    # Tipografía: usa load_font con fallback multiplataforma
+    font_text = load_font(36)
+    font_author = load_font(20)
+    font_cat = load_font(16)
 
     # Wrap manual simple por palabras
-    def wrap(text: str, font: ImageFont.FreeTypeFont, max_w: int) -> list[str]:
+    def wrap(text: str, font: ImageFont.BaseImageFont, max_w: int) -> list[str]:
         words = text.split()
         lines: list[str] = []
         cur: list[str] = []
@@ -75,7 +70,7 @@ def _render_phrase(
     margin = 20
     inner_w = h_w - 2 * margin
 
-    assert isinstance(font_text, ImageFont.FreeTypeFont)
+    assert isinstance(font_text, ImageFont.BaseImageFont)
     text_lines = wrap(phrase.text, font_text, inner_w)
     line_h = font_text.getbbox("Ay")[3] - font_text.getbbox("Ay")[1] + 6
 
