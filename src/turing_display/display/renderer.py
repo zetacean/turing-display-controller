@@ -65,11 +65,15 @@ def fit_letterbox(
         return Image.new("RGB", (width, height), padding_color)
 
     if src_w > src_h:
-        # Landscape: pre-rotar 90 + stretch a width x height
+        # Landscape: pre-rotar 90 + stretch a width x height (FILL, sin bandas).
+        # El driver rota 90deg el frame al enviarlo; la imagen queda
+        # horizontal y centrada, ocupando todo el panel.
         image = image.rotate(90, expand=True)
         return image.resize((width, height), _RESAMPLE)
 
-    # Portrait: pre-rotar 90 + encajar al ancho (bandas arriba/abajo en el frame)
+    # Portrait: pre-rotar 90 + encajar al ancho (bandas arriba/abajo en el frame).
+    # Tras la rotacion del driver esas bandas quedan a izquierda/derecha del panel,
+    # y la imagen queda vertical centrada.
     image = image.rotate(90, expand=True)
     rot_w, rot_h = image.size
     scale = width / rot_w
@@ -77,7 +81,13 @@ def fit_letterbox(
     new_h = int(rot_h * scale)
     resized = image.resize((new_w, new_h), _RESAMPLE)
 
-    # Fondo: degradado feliz por defecto, color sólido si se pide
+    if padding_color is None:
+        canvas = happy_background(width, height, seed=gradient_seed)
+    else:
+        canvas = Image.new("RGB", (width, height), padding_color)
+    canvas.paste(resized, (0, (height - new_h) // 2))
+    return canvas
+
     if padding_color is None:
         canvas = happy_background(width, height, seed=gradient_seed)
     else:

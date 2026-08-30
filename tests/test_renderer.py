@@ -23,21 +23,22 @@ def test_vertical_image_gets_letterbox() -> None:
     out = fit_letterbox(img, 320, 480)
     assert out.size == (320, 480)
     px = out.load()
-    # Debe haber píxeles del degradado (no todo verde de la imagen)
+    # La imagen rota 90deg (1920x1080 -> 1080x1920), se escala al ancho 320
+    # -> queda (320, 569). PIL pega al frame (320, 480) recortando vertical.
+    # Asi que el frame NO es todo verde: hay pixeles del degradado (bandas).
     green_only = sum(1 for x in range(320) for y in range(480) if px[x, y] == (0, 255, 0))
-    # La imagen solo ocupa el centro, hay bandas con color distinto
-    assert green_only < 320 * 480
+    assert green_only < 320 * 480, "no deberia ser todo verde, hay bandas de degradado"
 
 
 def test_custom_padding_color() -> None:
-    """El color de las bandas es configurable."""
+    """El color de las bandas es configurable (vertical -> bandas arriba/abajo)."""
     img = Image.new("RGB", (1080, 1920), (255, 255, 255))
     out = fit_letterbox(img, 320, 480, padding_color=(255, 0, 0))
     assert out.size == (320, 480)
     px = out.load()
-    # Debe haber bandas rojas
+    # Debe haber pixeles rojos (bandas)
     red_pixels = sum(1 for x in range(320) for y in range(480) if px[x, y] == (255, 0, 0))
-    assert red_pixels > 0
+    assert red_pixels > 0, "deberia haber bandas rojas"
 
 
 def test_rgba_image_converted() -> None:

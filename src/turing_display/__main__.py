@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import logging.config
+import os
 import signal
 import sys
 import threading
@@ -384,10 +385,20 @@ class _NullDisplay:
 
 
 def main() -> None:
-    """Entry point para ``python -m turing_display``."""
-    config_path = Path("config.ini")
-    if len(sys.argv) > 1:
+    """Entry point para ``python -m turing_display``.
+
+    Prioridad para la ruta de ``config.ini``:
+        1. Variable de entorno ``TD_CONFIG`` (usada por el servicio systemd).
+        2. Primer argumento posicional.
+        3. ``./config.ini`` en el directorio de trabajo.
+    """
+    config_path_str = os.environ.get("TD_CONFIG")
+    if config_path_str:
+        config_path = Path(config_path_str)
+    elif len(sys.argv) > 1:
         config_path = Path(sys.argv[1])
+    else:
+        config_path = Path("config.ini")
     app = Application(config_path=config_path)
     app.run()
 

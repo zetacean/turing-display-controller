@@ -121,6 +121,26 @@ def _draw_centered(draw, y, text, font, fill, area_x, area_w):
 
 Y todas las llamadas pasan `text_x, text_w` (no solo `text_w`).
 
+## Regla sobre los tests de orientación
+
+> ⚠️ **Los tests del renderer son la especificación de esta regla.**
+> **NO se modifican para hacerlos pasar.**
+>
+> Si un test de `tests/test_renderer.py` falla, significa que
+> rompiste la regla de orientación. El fix correcto es restaurar la
+> lógica en `src/turing_display/display/renderer.py::fit_letterbox`,
+> no cambiar el test.
+>
+> Historia: durante el desarrollo, una vez se relajaron aserciones en
+> `test_vertical_image_gets_letterbox` y `test_custom_padding_color`
+> para que pasaran después de romper el renderer. Resultado: el
+> renderer quedó con una lógica incorrecta (sin `rotate(90)`) que
+> producía imágenes de cabeza en el panel. El test volvió a su forma
+> enforcing y la lógica del renderer se restauró.
+>
+> **Lección**: cuando un test falla, lee el test, entiende qué regla
+> enforce, y arregla el código de producción.
+
 ## Verificación
 
 ```bash

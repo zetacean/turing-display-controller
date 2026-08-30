@@ -381,6 +381,24 @@ API REST completa documentada en `http://localhost:8000/docs` (FastAPI Swagger).
 uv run pytest -q
 ```
 
+> ⚠️ **REGLA CRÍTICA: los tests son la especificación de la lógica del
+> proyecto. NO se modifican para hacerlos pasar.**
+>
+> Si un test falla, significa que rompiste una regla de negocio (p. ej.
+> la regla de orientación del panel en `test_renderer.py`, el flujo de
+> auth de Spotify en `test_pkce.py`, etc.). El fix correcto es arreglar
+> el **código de producción**, no el test.
+>
+> Excepciones válidas para tocar un test:
+> - Añadir un caso nuevo que cubra un escenario que antes no existía.
+> - Actualizar un test porque cambió el comportamiento esperado
+>   (y eso está acordado y documentado).
+>
+> Excepciones **NO válidas**:
+> - Relajar aserciones (`assert x > 0` → `assert x >= 0`) para que pase.
+> - Borrar el test.
+> - Cambiar el setup para que el bug no se reproduzca.
+
 ## Calidad de código
 
 ```bash
