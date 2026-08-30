@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+.venv/
+
+# Distribución / empaquetado
+build/
+dist/
+*.egg-info/
+
+# uv
+.uv/
+
+# Tests
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Datos generados por la aplicación
+data/*.db
+data/*.db-journal
+cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Logs
+*.log
+*.jpg
+*.png
+*.jpeg
+*.bmp
