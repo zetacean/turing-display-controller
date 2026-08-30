@@ -1,20 +1,29 @@
 # -*- mode: python ; coding: utf-8 -*-
 """Spec de PyInstaller para empaquetar turing-display-controller."""
 
+import sys
 from pathlib import Path
 from PyInstaller.utils.hooks import collect_data_files
 
 block_cipher = None
 
+# Resolver paths relativos a la raíz del proyecto (no al cwd ni al dir del .spec).
+# Si PyInstaller se invoca desde otra carpeta (p. ej. usuario corre el comando
+# dentro de ~/Downloads/...), se evita el bug:
+#     "ERROR: script '.../scripts/src/turing_display/__main__.py' not found"
+PROJECT_ROOT = Path(sys.argv[0]).resolve().parent.parent if getattr(sys, "frozen", False) \
+    else Path(__file__).resolve().parent.parent
+ENTRY = str(PROJECT_ROOT / "src" / "turing_display" / "__main__.py")
+PATHEX = [str(PROJECT_ROOT / "src")]
+
 # Recolectar todos los assets web (templates + static)
 datas = []
-web_dir = Path("src/turing_display/web")
 datas += collect_data_files("turing_display.web.templates", includes=["*.html"])
 datas += collect_data_files("turing_display.web.static", includes=["*.js"])
 
 a = Analysis(
-    ["src/turing_display/__main__.py"],
-    pathex=["src"],
+    [ENTRY],
+    pathex=PATHEX,
     binaries=[],
     datas=datas,
     hiddenimports=[
