@@ -117,7 +117,10 @@ host = 0.0.0.0
 port = 8000
 
 [paths]
-images_dir = /opt/turing-display-controller/images
+# IMPORTANTE: ~/ se expande a /root cuando el servicio corre como root.
+# Usa siempre rutas absolutas. /home/<user>/images permite al usuario
+# subir fotos por SCP/SFTP sin sudo, y al servicio leerlas como root.
+images_dir = /home/orangepi/images
 phrases_db = /var/lib/turing-display/phrases.db
 
 [spotify]
@@ -126,6 +129,9 @@ client_id =
 redirect_uri = http://127.0.0.1:8000/api/spotify/callback
 poll_interval_s = 5
 CFGEOF
+        # Crear la carpeta de imagenes con permisos para el usuario normal
+        mkdir -p /home/orangepi/images
+        chown -R orangepi:orangepi /home/orangepi/images
     fi
     chmod 644 "$CONFIG"
     chown root:"$SERVICE_USER" "$CONFIG"
