@@ -201,6 +201,26 @@ orientation = portrait
 reset_on_startup = false
 ```
 
+> ⚠️ **Usa SIEMPRE rutas absolutas** en el `config.ini` de la Pi.
+> El servicio corre como `root`, así que `~/` se expande a `/root/`,
+> no a tu home. Las rutas relativas se evalúan contra el CWD del
+> binario (`/opt/turing-display-controller/`), que es confuso y propenso
+> a errores.
+>
+> ```ini
+> [paths]
+> images_dir = /home/orangepi/images     # NO ./images
+> phrases_db = /var/lib/turing-display/phrases.db   # NO ./data/phrases.db
+>
+> [spotify]
+> cache_dir = /var/lib/turing-display/cache/spotify
+> ```
+>
+> **Truco**: pon tu `client_id` de Spotify y las rutas ya arregladas en
+> el `config.ini` del repo, haz commit, y `install_pi.sh` lo copiará
+> automáticamente a `/etc/turing-display/config.ini` cada vez que
+> reinstales.
+
 ### 7. Instalar y arrancar el servicio systemd
 
 ```bash

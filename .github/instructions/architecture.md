@@ -72,6 +72,10 @@ imágenes volteadas, cortadas, o acostadas en el panel.
 - ❌ Relajar aserciones en `test_renderer.py` para que pasen.
 - ❌ Cambiar el config.ini del servicio para evitar entender el fix
   (ej. cambiar `images_dir` en vez de arreglar el código).
+- ❌ `clean_pi.sh && install_pi.sh` sin guardar backup del
+  `config.ini` de la Pi (el `install_pi.sh` regenera uno por defecto
+  con `client_id` vacío). Antes de reinstalar:
+  `sudo cp /etc/turing-display/config.ini ~/config.ini.bak`.
 - **Frontend**: Jinja2 + HTMX + JS mínimo, sin build step.
 - **Tooling**: `uv` para deps, `ruff` + `ty` para calidad, `PyInstaller` para binarios.
 

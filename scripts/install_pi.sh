@@ -127,13 +127,20 @@ chmod 775 "$VARLIB_DIR"
 echo
 echo "=== [9/11] config.ini en $CONFIG_DIR ==="
 mkdir -p "$CONFIG_DIR"
-if [[ ! -f "$CONFIG" ]]; then
-    if [[ -f "$PROJECT_ROOT/config.ini" ]]; then
-        cp "$PROJECT_ROOT/config.ini" "$CONFIG"
-    else
-        # Config por defecto. Rutas absolutas (~/ se expande a /root
-        # cuando el servicio corre como root).
-        cat > "$CONFIG" <<'CFGEOF'
+
+# REGLA: si el repo trae config.ini (con client_id de Spotify, etc.),
+# SIEMPRE copiarlo a /etc/turing-display/config.ini. Solo usar el heredoc
+# como fallback si el repo NO trae config.ini.
+if [[ -f "$PROJECT_ROOT/config.ini" ]]; then
+    cp "$PROJECT_ROOT/config.ini" "$CONFIG"
+    chmod 644 "$CONFIG"
+    chown root:"$SERVICE_USER" "$CONFIG"
+    echo "  -> Copiado desde repo: $PROJECT_ROOT/config.ini"
+    echo "     (incluye client_id de Spotify, com_port, etc.)"
+else
+    # Fallback: heredoc con valores por defecto. Rutas absolutas
+    # (~/ se expande a /root cuando el servicio corre como root).
+    cat > "$CONFIG" <<'CFGEOF'
 [display]
 com_port = /dev/ttyUSB0
 brightness = 70
@@ -154,10 +161,11 @@ client_id =
 redirect_uri = http://127.0.0.1:8000/api/spotify/callback
 poll_interval_s = 5
 CFGEOF
-    fi
     chmod 644 "$CONFIG"
     chown root:"$SERVICE_USER" "$CONFIG"
-    echo "  -> Creado $CONFIG (REVISAR y editar si hace falta)"
+    echo "  -> Creado config por defecto (repo no trae config.ini)"
+    echo "     AVISO: client_id de Spotify vacio. Edita $CONFIG para anadirlo."
+fi
 else
     echo "  -> Ya existe, sin tocar"
 fi
