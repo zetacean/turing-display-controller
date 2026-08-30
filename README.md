@@ -263,89 +263,33 @@ sudo systemctl daemon-reload
 
 ### Reinstalación (desde cero)
 
-Para dejar la máquina como recién instalada: primero desinstala
-(arriba), y luego vuelve a seguir la sección
+Hay dos scripts en `scripts/` que automatizan todo:
+
+```bash
+# 1. Limpiar instalación previa (si existe)
+sudo bash scripts/clean_pi.sh
+
+# 2. Instalar desde el repo (clonar primero si no lo tenias)
+git clone <repo-url>
+cd turing-display-controller
+sudo bash scripts/install_pi.sh
+```
+
+`install_pi.sh` hace todo: instala apt deps, uv, compila el binario
+con PyInstaller, lo deploya en `/opt/turing-display-controller/`,
+crea el usuario `turing`, regla udev, `config.ini`, unidad systemd
+y arranca el servicio.
+
+`clean_pi.sh` borra todo lo anterior: servicio, binarios,
+configuración, usuario, regla udev. **No** borra `phrases.db` ni
+tokens de Spotify (están en `/var/lib/turing-display/` si usaste el
+`config.ini` por defecto; bórralos a mano si quieres).
+
+### Instalación manual paso a paso
+
+Si prefieres hacerlo a mano, sigue la sección
 [**Instalación en Debian / Orange Pi (arm64)**](#instalación-en-debian--orange-pi-arm64)
 desde el paso 1.
-
-```bash
-# 1. Borrar todo lo instalado por el controlador
-sudo systemctl disable --now turing-display.service 2>/dev/null || true
-sudo rm -f /etc/systemd/system/turing-display.service
-sudo rm -rf /opt/turing-display-controller
-sudo rm -rf /opt/turing-build
-sudo rm -rf /etc/turing-display
-sudo rm -f /etc/udev/rules.d/99-turing-display.rules
-sudo userdel turing 2>/dev/null || true
-sudo systemctl daemon-reload
-sudo udevadm control --reload-rules
-
-# 2. (Opcional) Limpiar datos persistentes si quieres empezar de cero:
-sudo rm -rf ~/turing-data      # frases.db y spotify_tokens.db (ajusta path si lo moviste)
-```
-
-> **Importante:** esto borra la base de datos de frases y los tokens de
-> Spotify. Si solo quieres **actualizar** el binario sin perder datos,
-> usa la sección [Actualizar el binario](#actualizar-el-binario) de
-> arriba, que es no destructiva.
-
-```bash
-# 3. Volver a instalar desde el paso 1 de la guía:
-#    https://github.com/.../turing-display-controller#instalación-en-debian--orange-pi-arm64
-sudo apt update
-sudo apt install -y git build-essential libusb-1.0-0-dev libudev-dev pkg-config
-sudo mkdir -p /opt/turing-build && sudo chown $USER:$USER /opt/turing-build
-cd /opt/turing-build
-git clone <repo-url> turing-display-controller
-cd turing-display-controller
-curl -LsSf https://astral.sh/uv/install.sh | sh
-source $HOME/.local/bin/env
-uv sync
-uv run python scripts/build.py
-sudo mkdir -p /opt/turing-display-controller
-sudo cp -r dist/turing-display-controller/* /opt/turing-display-controller/
-sudo chmod +x /opt/turing-display-controller/turing-display-controller
-sudo useradd --system --shell /usr/sbin/nologin \
-    --home /opt/turing-display-controller turing
-sudo tee /etc/udev/rules.d/99-turing-display.rules >/dev/null <<'EOF'
-SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", MODE="0666"
-SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7522", MODE="0666"
-SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="5722", MODE="0666"
-EOF
-sudo udevadm control --reload-rules && sudo udevadm trigger
-sudo mkdir -p /etc/turing-display
-# Si tienes backup de config.ini, restáuralo antes de continuar:
-# sudo cp ~/backup/config.ini /etc/turing-display/config.ini
-# Si no, edítalo desde cero:
-sudo $EDITOR /etc/turing-display/config.ini
-sudo chmod 644 /etc/turing-display/config.ini
-sudo chown root:turing /etc/turing-display/config.ini
-# (re-crea la unidad systemd como en el paso 7)
-sudo tee /etc/systemd/system/turing-display.service >/dev/null <<'EOF'
-[Unit]
-Description=Turing Smart Display Controller
-After=network-online.target
-Wants=network-online.target
-
-[Service]
-Type=simple
-User=root
-Group=root
-WorkingDirectory=/opt/turing-display-controller
-ExecStart=/opt/turing-display-controller/turing-display-controller
-Environment=TD_CONFIG=/etc/turing-display/config.ini
-Restart=always
-RestartSec=5
-StandardOutput=journal
-StandardError=journal
-
-[Install]
-WantedBy=multi-user.target
-EOF
-sudo systemctl daemon-reload
-sudo systemctl enable --now turing-display.service
-sudo systemctl status turing-display.service
-```
 
 ---
 

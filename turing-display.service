@@ -1,0 +1,19 @@
+[Unit]
+Description=Turing Smart Display Controller
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/opt/turing-display-controller
+ExecStart=/opt/turing-display-controller/turing-display-controller
+Environment=TD_CONFIG=/etc/turing-display/config.ini
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
