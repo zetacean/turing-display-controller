@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from PIL import Image
+from PIL import Image, ImageOps
 
 from turing_display.display.gradients import happy_background
 
@@ -57,6 +57,12 @@ def fit_letterbox(
     """
     if image.mode != "RGB":
         image = image.convert("RGB")
+
+    # Aplicar rotacion EXIF para obtener la orientacion REAL.
+    # Sin esto, las fotos de celular vienen con orientacion 6/8 y el codigo
+    # las lee con las dimensiones en bruto del JPEG, lo que invierte
+    # vertical/horizontal y aplica la regla equivocada.
+    image = ImageOps.exif_transpose(image)
 
     src_w, src_h = image.size
     if src_w == 0 or src_h == 0:

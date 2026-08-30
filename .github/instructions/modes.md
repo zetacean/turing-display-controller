@@ -15,9 +15,44 @@ class Mode(Protocol):
 
 - Escanea `paths.images_dir` al activarse.
 - Mantiene índice circular.
-- Imagen horizontal: `resize` a pantalla completa.
-- Imagen vertical: `ImageOps.pad` con bandas negras.
 - `transition_ms` configurable (default 5000 ms).
+- **Render**: delega en `src/turing_display/display/renderer.py::fit_letterbox`.
+
+### Regla de orientación (CRÍTICA, NO OMITIR)
+
+El panel Turing Smart Display rota 90° el frame que recibe. Por eso
+`fit_letterbox` aplica una regla de oro según la orientación REAL de
+la imagen (NO las dimensiones en bruto del JPEG):
+
+| Orientación real | Pre-tratamiento | Resultado en el panel |
+|---|---|---|
+| Horizontal (ancho > alto) | `rotate(90)` + `resize` (stretch fill) | Horizontal, sin bandas |
+| Vertical (alto > ancho)   | `rotate(90)` + resize preservando aspecto + letterbox | Vertical, franjas a izq/der |
+
+**REGLA INVARIABLE**: siempre `rotate(90, expand=True)` ANTES de
+medir el aspect ratio. Si te saltas la rotación, las dimensiones
+serán engañosas.
+
+**REGLA INVARIABLE**: `fit_letterbox` SIEMPRE llama a
+`ImageOps.exif_transpose(image)` antes de medir dimensiones. Sin
+esto, las fotos de celular (EXIF 6/8) reportan dimensiones en bruto
+que NO coinciden con la orientación real, y la regla se aplica al
+revés.
+
+### EXIF orientation (CRÍTICO, NO OMITIR)
+
+`Image.open()` carga el JPEG **sin** aplicar la rotación EXIF. Hay
+que llamar `ImageOps.exif_transpose(image)` antes de cualquier
+medición de dimensiones o render. Sin esto:
+
+- Foto vertical de celular (EXIF 8): bytes dicen `4080×3060` (horizontal)
+  pero visualmente es `3060×4080` (vertical).
+- El código la toma como horizontal → aplica stretch fill → la imagen
+  sale **acostada** en el panel.
+
+`fit_letterbox` aplica `ImageOps.exif_transpose()` automáticamente.
+Cualquier nuevo punto de entrada que renderice fotos debe hacer lo
+mismo, o delegar en `fit_letterbox`.
 
 ## Spotify
 
