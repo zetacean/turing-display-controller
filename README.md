@@ -554,7 +554,7 @@ src/turing_display/
 
 tests/                      # 141 tests (pytest)
 docs/                       # Documentacion (ORIENTATION_FIX.md)
-scripts/                    # build.py, build.spec, launcher.py, verify, etc.
+scripts/                    # build.py, build.spec, launcher.py, install_pi.sh, clean_pi.sh
 ```
 
 ## Empaquetar como binario (PyInstaller)
