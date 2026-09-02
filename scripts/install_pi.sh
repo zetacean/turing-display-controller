@@ -166,9 +166,6 @@ CFGEOF
     echo "  -> Creado config por defecto (repo no trae config.ini)"
     echo "     AVISO: client_id de Spotify vacio. Edita $CONFIG para anadirlo."
 fi
-else
-    echo "  -> Ya existe, sin tocar"
-fi
 
 echo
 echo "=== [10/11] Unidad systemd ==="
