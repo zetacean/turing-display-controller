@@ -120,25 +120,26 @@ class SpotifyMode:
         assert isinstance(font, ImageFont.BaseImageFont)
         assert isinstance(sub_font, ImageFont.BaseImageFont)
 
-        # Carátula placeholder a la izquierda
-        ph = Image.new("RGB", (320, 240), (16, 16, 16))
-        ImageDraw.Draw(ph).text((130, 100), "ART", fill=(150, 150, 150))
+        # Carátula placeholder a la izquierda (cuadrada 240x240 para caber
+        # en el canvas horizontal de 240px de alto).
+        ph = Image.new("RGB", (240, 240), (16, 16, 16))
+        ImageDraw.Draw(ph).text((90, 110), "ART", fill=(150, 150, 150))
         img_h.paste(ph, (0, 0))
 
-        # Texto a la derecha (área 150px ancho)
-        text_w = h_w - 330
+        # Texto a la derecha (área 230px ancho = 480 - 250)
+        text_w = h_w - 250
         msg = "Spotify en pausa"
         bbox = font.getbbox(msg)
         tw = bbox[2] - bbox[0]
-        msg_x = 330 + (text_w - tw) // 2
-        msg_y = (h_h - 40) // 2
+        msg_x = 250 + (text_w - tw) // 2
+        msg_y = (h_h - 60) // 2
         draw_h.text((msg_x, msg_y), msg, font=font, fill=(255, 255, 255))
 
         sub = "Reanuda la música"
         bbox2 = sub_font.getbbox(sub)
         sw = bbox2[2] - bbox2[0]
-        sub_x = 330 + (text_w - sw) // 2
-        draw_h.text((sub_x, msg_y + 30), sub, font=sub_font, fill=(180, 180, 180))
+        sub_x = 250 + (text_w - sw) // 2
+        draw_h.text((sub_x, msg_y + 35), sub, font=sub_font, fill=(180, 180, 180))
 
         # Regla: imagen horizontal → pre-rotar 90 + stretch (fill)
         img_rot = img_h.transpose(Image.Transpose.ROTATE_90)
@@ -156,14 +157,15 @@ class SpotifyMode:
         """
         # Canvas horizontal auxiliar: 480x240
         h_w, h_h = 480, 240
-        cover_size = 320
-        text_x = cover_size + 10  # 330
-        text_w = h_w - text_x  # 150
+        # La caratula debe caber en h_h (240) de alto. Cuadrada -> 240x240.
+        cover_size = h_h  # 240
+        text_x = cover_size + 10  # 250
+        text_w = h_w - text_x  # 230
 
         img_h = Image.new("RGB", (h_w, h_h), (15, 15, 25))
         draw_h = ImageDraw.Draw(img_h)
 
-        # Carátula a la izquierda
+        # Carátula a la izquierda (cuadrada 240x240)
         cover = self._ensure_cover()
         if cover is not None:
             cover_resized = cover.resize((cover_size, cover_size), Image.Resampling.LANCZOS)
@@ -171,7 +173,7 @@ class SpotifyMode:
         else:
             # Placeholder cuando no hay carátula
             ph = Image.new("RGB", (cover_size, cover_size), (40, 40, 40))
-            ImageDraw.Draw(ph).text((20, 140), "ART", fill=(150, 150, 150))
+            ImageDraw.Draw(ph).text((90, 110), "ART", fill=(150, 150, 150))
             img_h.paste(ph, (0, 0))
 
         # Texto a la derecha
@@ -188,25 +190,36 @@ class SpotifyMode:
             x = area_x + (area_w - tw) // 2
             draw.text((x, y), text, font=font, fill=fill)
 
-        _draw_centered(draw_h, 20, "TITULO", font_label, (150, 150, 150), text_x, text_w)
-        title_lines = _wrap(track["title"], font_value, text_w)
-        for i, line in enumerate(title_lines[:2]):  # máximo 2 líneas
-            _draw_centered(draw_h, 42 + i * 22, line, font_value, (255, 255, 255), text_x, text_w)
+        def _truncate_with_ellipsis(text: str, font: ImageFont.BaseImageFont, max_w: int) -> str:
+            """Corta el texto y agrega '...' si no cabe en max_w."""
+            if font.getbbox(text)[2] - font.getbbox(text)[0] <= max_w:
+                return text
+            ellipsis = "..."
+            ellipsis_w = font.getbbox(ellipsis)[2] - font.getbbox(ellipsis)[0]
+            while text and (font.getbbox(text)[2] - font.getbbox(text)[0] + ellipsis_w) > max_w:
+                text = text[:-1]
+            return text + ellipsis if text else ellipsis
 
-        y_artist = 42 + min(len(title_lines), 2) * 22 + 10
-        _draw_centered(draw_h, y_artist, "ARTISTA", font_label, (150, 150, 150), text_x, text_w)
-        artist_lines = _wrap(track["artist"], font_value, text_w)
-        for i, line in enumerate(artist_lines[:1]):
-            _draw_centered(draw_h, y_artist + 22, line, font_value, (200, 200, 200), text_x, text_w)
+        # Layout vertical: titulo, artista, album (1 linea cada uno)
+        line_h = 22
+        y = 16
+        _draw_centered(draw_h, y, "TITULO", font_label, (150, 150, 150), text_x, text_w)
+        y += line_h
+        title_text = _truncate_with_ellipsis(track["title"], font_value, text_w)
+        _draw_centered(draw_h, y, title_text, font_value, (255, 255, 255), text_x, text_w)
 
-        y_album = y_artist + 22 + 28
+        y += line_h + 8
+        _draw_centered(draw_h, y, "ARTISTA", font_label, (150, 150, 150), text_x, text_w)
+        y += line_h
+        artist_text = _truncate_with_ellipsis(track["artist"], font_value, text_w)
+        _draw_centered(draw_h, y, artist_text, font_value, (200, 200, 200), text_x, text_w)
+
         if track.get("album"):
-            _draw_centered(draw_h, y_album, "ALBUM", font_label, (150, 150, 150), text_x, text_w)
-            album_lines = _wrap(track["album"], font_value, text_w)
-            for i, line in enumerate(album_lines[:1]):
-                _draw_centered(
-                    draw_h, y_album + 22, line, font_value, (180, 180, 180), text_x, text_w
-                )
+            y += line_h + 8
+            _draw_centered(draw_h, y, "ALBUM", font_label, (150, 150, 150), text_x, text_w)
+            y += line_h
+            album_text = _truncate_with_ellipsis(track["album"], font_value, text_w)
+            _draw_centered(draw_h, y, album_text, font_value, (180, 180, 180), text_x, text_w)
 
         # Regla: imagen horizontal → pre-rotar 90 + stretch (fill)
         img_rot = img_h.transpose(Image.Transpose.ROTATE_90)
