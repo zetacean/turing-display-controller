@@ -95,6 +95,81 @@ uv run python -m turing_display
 
 Dashboard disponible en: `http://localhost:8000`
 
+### 6. (Opcional) Instalar como servicio de Windows
+
+Para que el controlador arranque al inicio y se reinicie si falla,
+usa [NSSM](https://nssm.cc/) (recomendado) o Task Scheduler.
+
+**Con NSSM**:
+
+```powershell
+# 1. Descargar nssm.exe (https://nssm.cc/download) y ponerlo en el PATH
+#    o usar la version portable.
+
+# 2. Instalar el binario compilado en una ruta fija (ver seccion
+#    "Empaquetar como binario (PyInstaller)" mas abajo).
+
+# 3. Crear el servicio:
+nssm install TuringDisplay "C:\Program Files\turing-display-controller\turing-display-controller.exe"
+nssm set TuringDisplay AppDirectory "C:\Program Files\turing-display-controller"
+nssm set TuringDisplay AppEnvironmentExtra TD_CONFIG=C:\ProgramData\turing-display\config.ini
+nssm set TuringDisplay Start SERVICE_AUTO_START
+nssm set TuringDisplay DisplayName "Turing Smart Display Controller"
+nssm set TuringDisplay Description "Controlador de pantalla Turing Smart Display 3.5"
+nssm set TuringDisplay AppStdout "C:\ProgramData\turing-display\service.log"
+nssm set TuringDisplay AppStderr "C:\ProgramData\turing-display\service.log"
+nssm set TuringDisplay AppRotateFiles 1
+nssm set TuringDisplay AppRotateBytes 10485760
+
+# 4. Crear la carpeta para logs y config persistente (si no existe):
+New-Item -ItemType Directory -Path "C:\ProgramData\turing-display" -Force
+# Copiar config.ini alli (la primera vez):
+Copy-Item config.ini "C:\ProgramData\turing-display\config.ini"
+
+# 5. Arrancar y verificar:
+nssm start TuringDisplay
+nssm status TuringDisplay
+Get-Service TuringDisplay
+```
+
+**Comandos utiles**:
+
+```powershell
+# Ver estado
+nssm status TuringDisplay
+Get-Service TuringDisplay | Select-Object Status, Name, StartType
+
+# Parar / arrancar / reiniciar
+nssm stop TuringDisplay
+nssm start TuringDisplay
+nssm restart TuringDisplay
+
+# Editar configuracion (abre GUI)
+nssm edit TuringDisplay
+
+# Ver logs en vivo
+Get-Content "C:\ProgramData\turing-display\service.log" -Wait
+
+# Desinstalar
+nssm stop TuringDisplay
+nssm remove TuringDisplay confirm
+```
+
+**Alternativa sin NSSM (Task Scheduler)**:
+
+```powershell
+# Crear tarea que arranca al inicio como SYSTEM
+$Action = New-ScheduledTaskAction `
+    -Execute "C:\Program Files\turing-display-controller\turing-display-controller.exe" `
+    -WorkingDirectory "C:\Program Files\turing-display-controller"
+$Trigger = New-ScheduledTaskTrigger -AtStartup
+$Settings = New-ScheduledTaskSettingsSet -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
+$Principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+Register-ScheduledTask -TaskName "TuringDisplay" `
+    -Action $Action -Trigger $Trigger -Settings $Settings -Principal $Principal `
+    -Description "Turing Smart Display Controller"
+```
+
 ---
 
 ## Instalación en Debian / Orange Pi (arm64)
@@ -655,16 +730,11 @@ paso 3 en adelante. Todo se ejecuta con `sudo` sobre el binario de
 
 ### Instalación como servicio Windows
 
-Usa [NSSM](https://nssm.cc/) o Task Scheduler:
-
-```powershell
-# Con NSSM (recomendado):
-nssm install TuringDisplay "C:\Program Files\turing-display-controller\turing-display-controller.exe"
-nssm set TuringDisplay AppDirectory "C:\Program Files\turing-display-controller"
-nssm set TuringDisplay AppEnvironmentExtra TD_CONFIG=C:\ProgramData\turing-display\config.ini
-nssm set TuringDisplay Start SERVICE_AUTO_START
-nssm start TuringDisplay
-```
+La guía completa está en
+[**Instalación en Windows**](#instalación-en-windows), paso 6 (NSSM
+recomendado, Task Scheduler como alternativa). Ambos ejecutan el
+binario compilado (`turing-display-controller.exe`) con la env var
+`TD_CONFIG` apuntando a un `config.ini` persistente.
 
 ### Troubleshooting de compilación
 
